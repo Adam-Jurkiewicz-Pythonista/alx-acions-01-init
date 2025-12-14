@@ -1,0 +1,49 @@
+pipeline {
+    agent any
+
+    environment {
+        PYTHON = 'python'
+        VENV_DIR = '.venv'
+    }
+
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Setup Python env') {
+            steps {
+                sh """
+                ${PYTHON} -m venv ${VENV_DIR}
+                . ${VENV_DIR}/bin/activate
+                pip install --upgrade pip
+                pip install -r requirements.txt
+                """
+            }
+        }
+
+        stage('Run pytest') {
+            steps {
+                sh """
+                . ${VENV_DIR}/bin/activate
+                pytest -v --junitxml=reports/junit-report.xml
+                """
+            }
+        }
+    }
+
+    post {
+        always {
+            // Wciągnięcie wyników testów do zakładki "Test Result"
+            junit 'reports/junit-report.xml'
+        }
+        success {
+            echo 'Tests passed 🎉'
+        }
+        failure {
+            echo 'Tests failed ❌'
+        }
+    }
+}
